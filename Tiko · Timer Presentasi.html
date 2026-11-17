@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tiko · Timer Presentasi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#d6f5e4; --bg2:#bdeed3; --accent:#2fb37a; --accent-d:#1c8757; --soft:#eafbf2;
+    --ink:#2b2d42; --muted:#6b6f86; --card:#ffffffd9; --radius:22px;
+  }
+  body[data-state="warn"]  {--bg:#fff2c4;--bg2:#ffe697;--accent:#f0a412;--accent-d:#b97a00;--soft:#fff8e0}
+  body[data-state="danger"]{--bg:#ffdcd8;--bg2:#ffc3bd;--accent:#ee5a5a;--accent-d:#c03737;--soft:#fff0ee}
+  body[data-state="over"]  {--bg:#e8ddff;--bg2:#d6c6ff;--accent:#8a63e8;--accent-d:#6340c0;--soft:#f4efff}
+
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;min-height:100%}
+  body{
+    font-family:"Baloo 2",system-ui,sans-serif;color:var(--ink);
+    background:radial-gradient(circle at 20% 10%,var(--bg) 0%,var(--bg2) 100%);
+    background-attachment:fixed;
+    transition:background .8s ease;
+    min-height:100vh;min-height:100dvh;
+  }
+  /* bulatan dekoratif */
+  .bubbles{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:0}
+  .bubbles i{position:absolute;border-radius:50%;background:#ffffff55;animation:float 14s ease-in-out infinite}
+  .bubbles i:nth-child(1){width:140px;height:140px;left:-40px;top:12%}
+  .bubbles i:nth-child(2){width:80px;height:80px;right:8%;top:6%;animation-delay:-4s}
+  .bubbles i:nth-child(3){width:200px;height:200px;right:-70px;bottom:8%;animation-delay:-7s}
+  .bubbles i:nth-child(4){width:60px;height:60px;left:12%;bottom:10%;animation-delay:-2s}
+  @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-24px)}}
+
+  .wrap{position:relative;z-index:1;max-width:1080px;margin:0 auto;padding:18px 16px 28px;
+    display:grid;gap:18px;grid-template-columns:1fr;}
+  @media (min-width:900px){ .wrap{grid-template-columns:1.25fr .9fr;align-items:start;padding-top:28px} }
+
+  header{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:1.35rem;letter-spacing:.2px}
+  .brand .dot{width:34px;height:34px;border-radius:50%;background:var(--accent);display:grid;place-items:center;
+    color:#fff;font-size:1.1rem;box-shadow:0 4px 0 var(--accent-d);transition:background .6s}
+  .brand small{display:block;font-weight:600;font-size:.8rem;color:var(--muted);margin-top:-6px}
+
+  .icon-btn{white-space:nowrap;border:0;background:var(--card);color:var(--ink);height:42px;min-width:42px;padding:0 14px;border-radius:999px;
+    font:inherit;font-weight:700;font-size:.95rem;cursor:pointer;display:inline-flex;align-items:center;gap:6px;
+    box-shadow:0 3px 0 #0000001a;transition:transform .1s}
+  .icon-btn:active{transform:translateY(2px);box-shadow:0 1px 0 #0000001a}
+
+  /* ====== panel utama ====== */
+  .main{background:var(--card);backdrop-filter:blur(6px);border-radius:32px;padding:20px 16px 22px;
+    box-shadow:0 10px 30px #0000000f;display:flex;flex-direction:column;align-items:center;text-align:center}
+  .speech{position:relative;background:#fff;border-radius:18px;padding:8px 16px;font-weight:700;font-size:1.02rem;
+    box-shadow:0 3px 0 #00000012;margin-bottom:6px;max-width:92%;min-height:40px;display:flex;align-items:center}
+  .speech::after{content:"";position:absolute;bottom:-9px;left:50%;transform:translateX(-50%);
+    border:10px solid transparent;border-top-color:#fff;border-bottom:0}
+  .speech.pop{animation:pop .35s ease}
+  @keyframes pop{0%{transform:scale(.85)}60%{transform:scale(1.05)}100%{transform:scale(1)}}
+
+  .ring-wrap{position:relative;width:min(74vw,44vh,330px);aspect-ratio:1;margin:8px 0 2px}
+  .ring{width:100%;height:100%;transform:rotate(-90deg)}
+  .ring .track{stroke:var(--soft);transition:stroke .6s}
+  .ring .prog{stroke:var(--accent);stroke-linecap:round;transition:stroke .6s, stroke-dashoffset .25s linear}
+  .ring .dots{stroke:#00000014}
+  .mascot{position:absolute;inset:17%;display:grid;place-items:center}
+  .mascot svg{width:100%;height:100%;overflow:visible}
+  .m-body{fill:var(--accent);transition:fill .6s}
+  .m-shade{fill:var(--accent-d);transition:fill .6s;opacity:.35}
+  .m-leaf{fill:#57c98c}
+  body[data-state="warn"] .m-leaf{fill:#8bc34a}
+  body[data-state="danger"] .m-leaf{fill:#9ccc65}
+  .bounce{animation:bob 2.4s ease-in-out infinite;transform-origin:50% 90%}
+  body[data-state="warn"] .bounce{animation-duration:1.4s}
+  body[data-state="danger"] .bounce{animation:shake .5s ease-in-out infinite}
+  body[data-state="over"] .bounce{animation:jump .8s ease-in-out infinite}
+  body[data-state="paused"] .bounce, body[data-state="idle"] .bounce{animation-duration:3.4s}
+  @keyframes bob{0%,100%{transform:translateY(0) scale(1,1)}50%{transform:translateY(-5px) scale(1.02,.98)}}
+  @keyframes shake{0%,100%{transform:rotate(0)}25%{transform:rotate(-4deg)}75%{transform:rotate(4deg)}}
+  @keyframes jump{0%,100%{transform:translateY(0) scale(1.04,.96)}45%{transform:translateY(-14px) scale(.97,1.03)}}
+  .eyes{animation:blink 4.5s infinite;transform-origin:0 -4px;transform-box:fill-box}
+  @keyframes blink{0%,92%,100%{transform:scaleY(1)}95%{transform:scaleY(.1)}}
+  .sweat,.zzz,.sparkle{opacity:0;transition:opacity .4s}
+  body[data-state="warn"] .sweat, body[data-state="danger"] .sweat{opacity:1}
+  body[data-state="paused"] .zzz{opacity:1}
+  body[data-state="over"] .sparkle{opacity:1}
+  .sweat{animation:drip 1.6s ease-in infinite}
+  @keyframes drip{0%{transform:translateY(0)}100%{transform:translateY(6px)}}
+  .zzz text{animation:zz 2.2s ease-in-out infinite}
+  @keyframes zz{0%,100%{transform:translateY(0);opacity:.4}50%{transform:translateY(-4px);opacity:1}}
+
+  .confetti{position:absolute;inset:0;pointer-events:none;overflow:visible}
+  .confetti span{position:absolute;top:-6%;width:9px;height:14px;border-radius:3px;opacity:0}
+  body[data-state="over"] .confetti span{animation:fall 2.6s linear infinite}
+  @keyframes fall{0%{transform:translateY(0) rotate(0);opacity:1}100%{transform:translateY(120%) rotate(540deg);opacity:0}}
+
+  .time{font-weight:800;font-variant-numeric:tabular-nums;line-height:1;letter-spacing:1px;
+    font-size:clamp(3.6rem,17vw,6.4rem);color:var(--ink);margin-top:4px;transition:color .5s}
+  body[data-state="over"] .time{color:var(--accent-d)}
+  .sub{color:var(--muted);font-weight:600;font-size:.95rem;margin-top:2px;min-height:1.4em}
+
+  .controls{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:14px;flex-wrap:wrap}
+  .big{width:86px;height:86px;border-radius:50%;border:0;cursor:pointer;background:var(--accent);color:#fff;
+    font:inherit;font-size:2rem;display:grid;place-items:center;box-shadow:0 6px 0 var(--accent-d);
+    transition:background .6s, box-shadow .6s, transform .1s}
+  .big:active{transform:translateY(4px);box-shadow:0 2px 0 var(--accent-d)}
+  .round{width:56px;height:56px;border-radius:50%;border:0;cursor:pointer;background:#fff;color:var(--ink);
+    font:inherit;font-weight:800;font-size:1rem;box-shadow:0 4px 0 #0000001c;display:grid;place-items:center;transition:transform .1s}
+  .round:active{transform:translateY(3px);box-shadow:0 1px 0 #0000001c}
+  .round small{font-size:.66rem;display:block;margin-top:-4px;font-weight:700;color:var(--muted)}
+  .hint{margin-top:12px;font-size:.82rem;color:var(--muted)}
+  @media (max-width:420px){#stageLbl{display:none} .brand small{display:none}}
+  .hint kbd{background:#fff;border-radius:6px;padding:0 6px;box-shadow:0 2px 0 #0000001a;font-family:inherit;font-weight:700}
+  @media (hover:none){.hint{display:none}}
+
+  /* ====== pengaturan ====== */
+  .settings{background:var(--card);backdrop-filter:blur(6px);border-radius:28px;padding:18px 18px 20px;box-shadow:0 10px 30px #0000000f}
+  .settings h2{margin:0 0 6px;font-size:1.15rem}
+  .group{margin-top:14px}
+  .label{font-weight:700;font-size:.92rem;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
+  .label span{color:var(--muted);font-weight:600;font-size:.82rem}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{border:2px solid transparent;background:#fff;border-radius:999px;padding:6px 14px;font:inherit;font-weight:700;
+    cursor:pointer;color:var(--ink);box-shadow:0 2px 0 #00000014;transition:all .15s}
+  .chip.on{background:var(--accent);color:#fff;box-shadow:0 3px 0 var(--accent-d)}
+  .custom{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .num{display:flex;align-items:center;background:#fff;border-radius:14px;padding:4px 10px;box-shadow:0 2px 0 #00000014}
+  .num input{width:52px;border:0;outline:0;font:inherit;font-weight:800;font-size:1.15rem;text-align:center;background:transparent;color:var(--ink)}
+  .num label{font-size:.8rem;color:var(--muted);font-weight:700}
+  .apply{border:0;background:var(--ink);color:#fff;border-radius:14px;padding:9px 14px;font:inherit;font-weight:700;cursor:pointer}
+  select{appearance:none;-webkit-appearance:none;border:0;background:#fff;border-radius:12px;padding:7px 30px 7px 12px;font:inherit;font-weight:700;color:var(--ink);
+    box-shadow:0 2px 0 #00000014;cursor:pointer;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b6f86' stroke-width='2' fill='none'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 10px center}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0}
+  .row + .row{border-top:1px dashed #0000001a}
+  .row .t{font-weight:700;font-size:.93rem}
+  .row .t small{display:block;font-weight:600;color:var(--muted);font-size:.78rem;margin-top:-3px}
+  .pill{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+  .switch{position:relative;width:52px;height:30px;flex:none}
+  .switch input{opacity:0;width:0;height:0}
+  .switch b{position:absolute;inset:0;background:#d5d7e2;border-radius:999px;cursor:pointer;transition:.2s}
+  .switch b::after{content:"";position:absolute;width:24px;height:24px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 2px 4px #0002}
+  .switch input:checked + b{background:var(--accent)}
+  .switch input:checked + b::after{transform:translateX(22px)}
+  input[type=range]{width:100%;accent-color:var(--accent)}
+  .test{white-space:nowrap;border:0;background:#fff;border-radius:12px;padding:7px 12px;font:inherit;font-weight:700;cursor:pointer;box-shadow:0 2px 0 #00000014;color:var(--ink)}
+  .tips{margin-top:14px;background:var(--soft);border-radius:16px;padding:10px 14px;font-size:.86rem;color:var(--ink);transition:background .6s}
+  .tips b{display:block;margin-bottom:2px}
+
+  /* ====== mode panggung ====== */
+  body.stage .settings, body.stage header .brand small{display:none}
+  body.stage .wrap{grid-template-columns:1fr;max-width:900px}
+  body.stage .main{background:transparent;box-shadow:none;backdrop-filter:none;padding-top:0}
+  body.stage .ring-wrap{width:min(80vw,52vh,460px)}
+  body.stage .time{font-size:clamp(5rem,24vw,11rem)}
+  body.stage .speech{font-size:1.25rem}
+  body.stage .hint{display:none}
+
+  .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(30px);background:var(--ink);color:#fff;
+    padding:10px 18px;border-radius:999px;font-weight:700;opacity:0;transition:all .3s;z-index:9;pointer-events:none;font-size:.95rem;
+    max-width:90vw;text-align:center}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none!important;transition:none!important}
+  }
+</style>
+</head>
+<body data-state="idle">
+<div class="bubbles"><i></i><i></i><i></i><i></i></div>
+
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="dot">⏱</div>
+      <div>Tiko Timer<small>teman presentasimu</small></div>
+    </div>
+    <button class="icon-btn" id="stageBtn" title="Mode Panggung (F)">🎤 <span id="stageLbl">Mode Panggung</span></button>
+  </header>
+
+  <!-- ===== timer utama ===== -->
+  <section class="main">
+    <div class="speech" id="speech">Siap presentasi? Kamu pasti bisa! 💪</div>
+
+    <div class="ring-wrap">
+      <svg class="ring" viewBox="0 0 200 200" aria-hidden="true">
+        <circle class="track" cx="100" cy="100" r="88" fill="none" stroke-width="14"/>
+        <circle class="dots"  cx="100" cy="100" r="88" fill="none" stroke-width="3" stroke-dasharray="1 22.04"/>
+        <circle class="prog" id="prog" cx="100" cy="100" r="88" fill="none" stroke-width="14"/>
+      </svg>
+
+      <div class="mascot">
+        <svg viewBox="-60 -66 120 126" aria-label="Tiko si maskot">
+          <g class="bounce">
+            <!-- daun kecambah -->
+            <path d="M0 -38 C0 -46 1 -50 2 -54" stroke="#3f9a68" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <path class="m-leaf" d="M2 -54 C10 -64 24 -62 26 -56 C18 -50 8 -50 2 -54Z"/>
+            <path class="m-leaf" d="M2 -54 C-6 -62 -18 -60 -20 -55 C-12 -49 -4 -50 2 -54Z" opacity=".85"/>
+            <!-- badan -->
+            <path class="m-body" d="M-46 8 C-46 -26 -26 -40 0 -40 C26 -40 46 -26 46 8 C46 34 26 46 0 46 C-26 46 -46 34 -46 8Z"/>
+            <ellipse class="m-shade" cx="0" cy="38" rx="30" ry="6"/>
+            <ellipse cx="-22" cy="-22" rx="9" ry="5" fill="#fff" opacity=".35" transform="rotate(-30 -22 -22)"/>
+            <!-- pipi -->
+            <ellipse cx="-27" cy="12" rx="7" ry="4.5" fill="#ff8fa3" opacity=".75"/>
+            <ellipse cx="27"  cy="12" rx="7" ry="4.5" fill="#ff8fa3" opacity=".75"/>
+            <!-- mata -->
+            <g class="eyes" id="eyesOpen">
+              <ellipse cx="-15" cy="-2" rx="6" ry="7.5" fill="#2b2d42"/>
+              <ellipse cx="15"  cy="-2" rx="6" ry="7.5" fill="#2b2d42"/>
+              <circle cx="-13" cy="-5" r="2.2" fill="#fff"/>
+              <circle cx="17"  cy="-5" r="2.2" fill="#fff"/>
+            </g>
+            <g id="eyesSleep" style="display:none" stroke="#2b2d42" stroke-width="3" stroke-linecap="round" fill="none">
+              <path d="M-21 -1 Q-15 4 -9 -1"/><path d="M9 -1 Q15 4 21 -1"/>
+            </g>
+            <g id="eyesHappy" style="display:none" stroke="#2b2d42" stroke-width="3.2" stroke-linecap="round" fill="none">
+              <path d="M-21 1 Q-15 -7 -9 1"/><path d="M9 1 Q15 -7 21 1"/>
+            </g>
+            <!-- mulut -->
+            <path id="mouth" d="M-9 12 Q0 20 9 12" stroke="#2b2d42" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <!-- keringat -->
+            <path class="sweat" d="M36 -16 C40 -10 42 -6 38 -3 C34 -1 31 -5 33 -9Z" fill="#7cc7ff"/>
+            <!-- zzz -->
+            <g class="zzz" fill="#2b2d42" font-family="Baloo 2, sans-serif" font-weight="800">
+              <text x="30" y="-30" font-size="12">z</text>
+              <text x="40" y="-42" font-size="16" style="animation-delay:-.7s">z</text>
+            </g>
+            <!-- kilau -->
+            <g class="sparkle" fill="#ffd54a">
+              <path d="M-48 -30 l3 7 7 3 -7 3 -3 7 -3 -7 -7 -3 7 -3z"/>
+              <path d="M46 -40 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2z"/>
+            </g>
+          </g>
+        </svg>
+      </div>
+      <div class="confetti" id="confetti"></div>
+    </div>
+
+    <div class="time" id="time" aria-live="off">07:00</div>
+    <div class="sub" id="sub">Durasi: 7 menit</div>
+
+    <div class="controls">
+      <button class="round" id="resetBtn" title="Ulang (R)">↺<small>ulang</small></button>
+      <button class="big" id="playBtn" title="Mulai / Jeda (Spasi)" aria-label="Mulai">▶</button>
+      <button class="round" id="addBtn" title="Tambah 1 menit">+1<small>menit</small></button>
+    </div>
+    <div class="hint"><kbd>Spasi</kbd> mulai/jeda · <kbd>R</kbd> ulang · <kbd>F</kbd> mode panggung</div>
+  </section>
+
+  <!-- ===== pengaturan ===== -->
+  <aside class="settings">
+    <h2>⚙️ Atur Waktu</h2>
+
+    <div class="group">
+      <div class="label">Pilih cepat <span>menit</span></div>
+      <div class="chips" id="presets"></div>
+    </div>
+
+    <div class="group">
+      <div class="label">Atur sendiri</div>
+      <div class="custom">
+        <div class="num"><input id="inMin" type="number" inputmode="numeric" min="0" max="180" value="7"><label>mnt</label></div>
+        <div class="num"><input id="inSec" type="number" inputmode="numeric" min="0" max="59" value="0"><label>dtk</label></div>
+        <button class="apply" id="applyBtn">Pakai</button>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="label">Pengingat</div>
+      <div class="row">
+        <div class="t"><span class="pill" style="background:#f0a412"></span>Mulai rangkum<small>layar jadi kuning + bunyi lembut</small></div>
+        <select id="warnSel">
+          <option value="0">Mati</option>
+          <option value="60">1 menit</option>
+          <option value="120" selected>2 menit</option>
+          <option value="180">3 menit</option>
+          <option value="300">5 menit</option>
+        </select>
+      </div>
+      <div class="row">
+        <div class="t"><span class="pill" style="background:#ee5a5a"></span>Saatnya penutup<small>layar jadi merah + bunyi lembut</small></div>
+        <select id="dangerSel">
+          <option value="0">Mati</option>
+          <option value="15">15 detik</option>
+          <option value="30">30 detik</option>
+          <option value="60" selected>1 menit</option>
+          <option value="120">2 menit</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="label">Suara</div>
+      <div class="row">
+        <div class="t">Bunyi lonceng lembut<small>berbunyi singkat, tidak terus-menerus</small></div>
+        <label class="switch"><input type="checkbox" id="soundChk" checked><b></b></label>
+      </div>
+      <div class="row">
+        <div class="t">Getar (HP)<small>getaran singkat saat waktu habis</small></div>
+        <label class="switch"><input type="checkbox" id="vibChk" checked><b></b></label>
+      </div>
+      <div class="row" style="gap:14px">
+        <span style="font-size:1.2rem">🔈</span>
+        <input type="range" id="vol" min="0" max="100" value="55" aria-label="Volume">
+        <button class="test" id="testBtn">Coba 🔔</button>
+      </div>
+    </div>
+
+    <div class="tips">
+      <b>💡 Tips presentasi</b>
+      <span id="tipText">Latih presentasimu dengan timer ini 2–3 kali. Targetkan selesai sekitar 30 detik sebelum waktu habis.</span>
+    </div>
+  </aside>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const C = 2 * Math.PI * 88;
+  const prog = $('prog');
+  prog.style.strokeDasharray = C;
+
+  // ---------- state ----------
+  let total = 420;          // detik
+  let remainingAtPause = total;
+  let endTime = 0;
+  let running = false;
+  let started = false;
+  let fired = {warn:false, danger:false, over:false};
+  let tickId = null, wakeLock = null, lastState = '';
+
+  const settings = {warn:120, danger:60, sound:true, vib:true, vol:55, total:420};
+  try { Object.assign(settings, JSON.parse(localStorage.getItem('tiko-settings') || '{}')); } catch(e){}
+  const save = () => { try { localStorage.setItem('tiko-settings', JSON.stringify(settings)); } catch(e){} };
+
+  // ---------- suara lembut (Web Audio) ----------
+  let ctx = null, master = null;
+  function ensureAudio(){
+    try{
+      if(!ctx){
+        ctx = new (window.AudioContext || window.webkitAudioContext)();
+        master = ctx.createGain();
+        const comp = ctx.createDynamicsCompressor();
+        master.connect(comp); comp.connect(ctx.destination);
+      }
+      if(ctx.state === 'suspended') ctx.resume();
+      master.gain.value = (settings.vol/100) * 0.9;
+    }catch(e){ ctx = null; }
+  }
+  function bell(freq, t, dur = 1.8, amp = 0.22){
+    const o1 = ctx.createOscillator(), o2 = ctx.createOscillator();
+    const g1 = ctx.createGain(), g2 = ctx.createGain();
+    o1.type = 'sine'; o1.frequency.value = freq;
+    o2.type = 'sine'; o2.frequency.value = freq * 2.76; // nada "lonceng kecil"
+    g1.gain.setValueAtTime(0.0001, t);
+    g1.gain.exponentialRampToValueAtTime(amp, t + 0.015);
+    g1.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    g2.gain.setValueAtTime(0.0001, t);
+    g2.gain.exponentialRampToValueAtTime(amp * 0.12, t + 0.01);
+    g2.gain.exponentialRampToValueAtTime(0.0001, t + dur * 0.35);
+    o1.connect(g1); o2.connect(g2); g1.connect(master); g2.connect(master);
+    o1.start(t); o2.start(t); o1.stop(t + dur + .05); o2.stop(t + dur + .05);
+  }
+  function play(notes, gap = 0.2, delay = 0){
+    if(!settings.sound) return;
+    ensureAudio(); if(!ctx) return;
+    const t0 = ctx.currentTime + 0.05 + delay;
+    notes.forEach((f, i) => bell(f, t0 + i * gap));
+  }
+  const N = {C5:523.25, E5:659.25, G5:783.99, A5:880, C6:1046.5, D5:587.33};
+  const SOUNDS = {
+    warn:   () => play([N.E5, N.G5], 0.28),
+    danger: () => play([N.G5, N.E5, N.G5], 0.24),
+    over:   () => { play([N.C5, N.E5, N.G5, N.C6], 0.2); play([N.C5, N.E5, N.G5, N.C6], 0.2, 2.6); },
+    test:   () => play([N.C5, N.E5, N.G5], 0.2)
+  };
+  const vibrate = p => { if(settings.vib && navigator.vibrate){ try{ navigator.vibrate(p); }catch(e){} } };
+
+  // ---------- teks ----------
+  const MSG = {
+    idle:    ['Siap presentasi? Kamu pasti bisa! 💪','Tarik napas, senyum, mulai! 😊','Aku temani sampai selesai ya~'],
+    running: ['Santai, kamu keren kok~ ✨','Bicara pelan & jelas ya 🗣️','Jangan lupa kontak mata 👀','Lancar jaya! 🚀'],
+    warn:    ['Mulai rangkum poin utamanya ya 📝','Sisa sedikit lagi, fokus ke inti! 🎯'],
+    danger:  ['Saatnya kesimpulan! 🏁','Tutup dengan kalimat yang berkesan! 🌟'],
+    over:    ['Waktu habis! Terima kasih~ 🎉','Kerja bagus! Saatnya sesi tanya jawab 🙌'],
+    paused:  ['Istirahat sebentar... 😴','Aku tunggu ya~ ☕']
+  };
+  const TIPS = [
+    'Latih presentasimu dengan timer ini 2–3 kali. Targetkan selesai sekitar 30 detik sebelum waktu habis.',
+    'Aturan praktis: sekitar 1–2 menit untuk setiap slide.',
+    'Bagi waktu: 10% pembukaan, 75% isi, 15% kesimpulan.',
+    'Pakai Mode Panggung lalu letakkan HP di meja agar mudah dilirik saat presentasi.',
+    'Saat layar kuning, lewati detail kecil dan fokus pada poin terpenting.'
+  ];
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+  const MOUTH = {
+    idle:    'M-10 11 Q0 21 10 11',
+    running: 'M-9 12 Q0 19 9 12',
+    paused:  'M-5 14 Q0 17 5 14',
+    warn:    'M-9 14 Q0 17 9 13',
+    danger:  'M-8 17 Q0 9 8 17',
+    over:    'M-13 9 Q0 27 13 9 Z'
+  };
+
+  // ---------- util ----------
+  const pad = n => String(n).padStart(2, '0');
+  function fmt(sec){
+    const m = Math.floor(sec / 60), s = sec % 60;
+    if(m >= 60) return Math.floor(m/60) + ':' + pad(m % 60) + ':' + pad(s);
+    return pad(m) + ':' + pad(s);
+  }
+  const fmtDur = s => {
+    const m = Math.floor(s/60), d = s % 60;
+    return (m ? m + ' menit' : '') + (m && d ? ' ' : '') + (d ? d + ' detik' : '') || '0 detik';
+  };
+  const remaining = () => running ? (endTime - Date.now()) / 1000 : remainingAtPause;
+
+  function syncFired(){
+    const r = remaining();
+    fired.warn   = !(settings.warn   > 0 && r > settings.warn);
+    fired.danger = !(settings.danger > 0 && r > settings.danger);
+    fired.over   = r <= 0;
+  }
+
+  function stateFor(r){
+    if(!started) return 'idle';
+    if(r <= 0) return 'over';
+    if(!running) return 'paused';
+    if(settings.danger > 0 && r <= settings.danger) return 'danger';
+    if(settings.warn   > 0 && r <= settings.warn)   return 'warn';
+    return 'running';
+  }
+
+  function setState(st){
+    if(st === lastState) return;
+    lastState = st;
+    document.body.dataset.state = st;
+    $('mouth').setAttribute('d', MOUTH[st]);
+    $('mouth').setAttribute('fill', st === 'over' ? '#2b2d42' : 'none');
+    $('eyesOpen').style.display  = (st === 'paused' || st === 'over') ? 'none' : '';
+    $('eyesSleep').style.display = st === 'paused' ? '' : 'none';
+    $('eyesHappy').style.display = st === 'over' ? '' : 'none';
+    const sp = $('speech');
+    sp.textContent = pick(MSG[st]);
+    sp.classList.remove('pop'); void sp.offsetWidth; sp.classList.add('pop');
+  }
+
+  function render(){
+    const r = remaining();
+    let txt;
+    if(r > 0){ txt = fmt(Math.ceil(r - 0.001)); }
+    else { txt = '+' + fmt(Math.floor(-r)); }
+    $('time').textContent = txt;
+    const p = Math.max(0, Math.min(1, r / total));
+    prog.style.strokeDashoffset = C * (1 - p);
+
+    if(r <= 0 && started) $('sub').textContent = 'Lewat waktu ' + fmtDur(Math.floor(-r));
+    else $('sub').textContent = 'Durasi: ' + fmtDur(total);
+
+    document.title = (started ? txt + ' · ' : '') + 'Tiko Timer';
+
+    // pemicu bunyi (sekali saja per ambang)
+    if(running){
+      if(!fired.warn && settings.warn > 0 && r <= settings.warn && r > 0){ fired.warn = true; SOUNDS.warn(); vibrate(80); }
+      if(!fired.danger && settings.danger > 0 && r <= settings.danger && r > 0){ fired.danger = true; fired.warn = true; SOUNDS.danger(); vibrate([80,80,80]); }
+      if(!fired.over && r <= 0){ fired.over = fired.warn = fired.danger = true; SOUNDS.over(); vibrate([200,120,200]); toast('⏰ Waktu habis!'); }
+    }
+    setState(stateFor(r));
+  }
+
+  // ---------- kontrol ----------
+  async function requestWake(){
+    try{ if('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); }catch(e){}
+  }
+  function releaseWake(){ try{ wakeLock && wakeLock.release(); }catch(e){} wakeLock = null; }
+
+  function start(){
+    ensureAudio();
+    if(!started) syncFired();
+    started = true; running = true;
+    endTime = Date.now() + remainingAtPause * 1000;
+    clearInterval(tickId); tickId = setInterval(render, 200);
+    $('playBtn').textContent = '❚❚'; $('playBtn').setAttribute('aria-label','Jeda');
+    requestWake(); lastState = ''; render();
+  }
+  function pause(){
+    remainingAtPause = remaining(); running = false;
+    clearInterval(tickId);
+    $('playBtn').textContent = '▶'; $('playBtn').setAttribute('aria-label','Lanjut');
+    releaseWake(); render();
+  }
+  function reset(){
+    running = false; started = false; clearInterval(tickId);
+    remainingAtPause = total; syncFired();
+    $('playBtn').textContent = '▶'; $('playBtn').setAttribute('aria-label','Mulai');
+    releaseWake(); lastState = ''; render();
+  }
+  function setTotal(sec){
+    sec = Math.max(5, Math.min(sec, 3 * 3600));
+    total = sec; settings.total = sec; save();
+    $('inMin').value = Math.floor(sec / 60); $('inSec').value = sec % 60;
+    markPreset(); reset();
+  }
+  function addMinute(){
+    if(running) endTime += 60000; else remainingAtPause += 60;
+    const r = remaining();
+    if(r > total) total = Math.ceil(r);
+    syncFired(); lastState = ''; render();
+    toast('➕ 1 menit ditambahkan');
+  }
+
+  // ---------- UI pengaturan ----------
+  const PRESETS = [3, 5, 7, 10, 15, 20, 30];
+  const presetsEl = $('presets');
+  PRESETS.forEach(m => {
+    const b = document.createElement('button');
+    b.className = 'chip'; b.textContent = m; b.dataset.sec = m * 60;
+    b.onclick = () => setTotal(m * 60);
+    presetsEl.appendChild(b);
+  });
+  function markPreset(){ [...presetsEl.children].forEach(b => b.classList.toggle('on', +b.dataset.sec === total)); }
+
+  $('applyBtn').onclick = () => {
+    const m = parseInt($('inMin').value, 10) || 0, s = parseInt($('inSec').value, 10) || 0;
+    if(m * 60 + s < 5){ toast('Minimal 5 detik ya 🙂'); return; }
+    setTotal(m * 60 + Math.min(59, s));
+    toast('✅ Timer diatur ke ' + fmtDur(total));
+  };
+  ['inMin','inSec'].forEach(id => $(id).addEventListener('keydown', e => { if(e.key === 'Enter') $('applyBtn').click(); }));
+
+  $('warnSel').value = settings.warn; $('dangerSel').value = settings.danger;
+  $('warnSel').onchange = e => { settings.warn = +e.target.value; save(); syncFiredKeep(); };
+  $('dangerSel').onchange = e => { settings.danger = +e.target.value; save(); syncFiredKeep(); };
+  function syncFiredKeep(){ const wasOver = fired.over; syncFired(); fired.over = wasOver || fired.over; lastState=''; render(); }
+
+  $('soundChk').checked = settings.sound; $('vibChk').checked = settings.vib; $('vol').value = settings.vol;
+  $('soundChk').onchange = e => { settings.sound = e.target.checked; save(); };
+  $('vibChk').onchange = e => { settings.vib = e.target.checked; save(); };
+  $('vol').oninput = e => { settings.vol = +e.target.value; save(); if(master) master.gain.value = (settings.vol/100) * 0.9; };
+  $('testBtn').onclick = () => { const was = settings.sound; settings.sound = true; SOUNDS.test(); settings.sound = was; };
+
+  $('playBtn').onclick = () => running ? pause() : start();
+  $('resetBtn').onclick = reset;
+  $('addBtn').onclick = addMinute;
+
+  function toggleStage(){
+    const on = document.body.classList.toggle('stage');
+    $('stageLbl').textContent = on ? 'Keluar' : 'Mode Panggung';
+    try{
+      if(on && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(()=>{});
+      if(!on && document.fullscreenElement) document.exitFullscreen().catch(()=>{});
+    }catch(e){}
+  }
+  $('stageBtn').onclick = toggleStage;
+  document.addEventListener('fullscreenchange', () => {
+    if(!document.fullscreenElement && document.body.classList.contains('stage')){
+      document.body.classList.remove('stage'); $('stageLbl').textContent = 'Mode Panggung';
+    }
+  });
+
+  document.addEventListener('keydown', e => {
+    if(['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName)) return;
+    if(e.code === 'Space'){ e.preventDefault(); running ? pause() : start(); }
+    else if(e.key === 'r' || e.key === 'R') reset();
+    else if(e.key === 'f' || e.key === 'F') toggleStage();
+    else if(e.key === '+' || e.key === '=') addMinute();
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if(document.visibilityState === 'visible'){ if(running) requestWake(); render(); }
+  });
+
+  // konfeti
+  const colors = ['#ffd54a','#ff8fa3','#7cc7ff','#8be0b3','#c3a6ff'];
+  for(let i = 0; i < 18; i++){
+    const s = document.createElement('span');
+    s.style.left = (Math.random() * 100) + '%';
+    s.style.background = colors[i % colors.length];
+    s.style.animationDelay = (Math.random() * 2.6) + 's';
+    s.style.animationDuration = (2 + Math.random() * 1.4) + 's';
+    $('confetti').appendChild(s);
+  }
+
+  // toast
+  let toastT;
+  function toast(t){ const el = $('toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), 2400); }
+
+  // tips berganti
+  let tipI = 0;
+  setInterval(() => { tipI = (tipI + 1) % TIPS.length; $('tipText').textContent = TIPS[tipI]; }, 12000);
+
+  setTotal(settings.total || 420);
+})();
+</script>
+</body>
+</html>
